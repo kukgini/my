@@ -1,0 +1,17 @@
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+
+.settings/
+.classpath
+.project
+
+.idea/
+*.iml
+*.ipr
+*.iws
+
+.DS_Store
+
+build/

@@ -1,0 +1,5 @@
+description = 'My RX Example 1'
+
+dependencies {
+    compile 'io.reactivex:rxjava:1.0.0'
+}

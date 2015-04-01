@@ -1,0 +1,135 @@
+description = 'MyMachines'
+
+apply plugin: 'base'
+apply plugin: 'idea'
+
+ext {
+    linkHomepage = 'http://projects.spring.io/spring-integration'
+    linkCi = 'https://build.spring.io/browse/INTSAMPLES'
+    linkIssue = 'https://jira.spring.io/browse/INTSAMPLES'
+    linkScmUrl = 'https://github.com/spring-projects/spring-integration-samples'
+    linkScmConnection = 'scm:git:git://github.com/spring-projects/spring-integration-samples.git'
+    linkScmDevConnection = 'scm:git:ssh://git@github.com:spring-projects/spring-integration-samples.git'
+}
+
+buildscript {
+    repositories {
+        maven { url "http://repo.spring.io/libs-release" }
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.1.9.RELEASE")
+    }
+}
+
+allprojects {
+    group = 'my'
+}
+
+subprojects { subproject ->
+
+    apply plugin: 'java'
+    apply plugin: 'idea'
+    apply plugin: 'spring-boot'
+
+    repositories {
+        maven { url 'http://repo.spring.io/libs-release' }
+        mavenCentral()
+    }
+
+    if (!(subproject.name in ['somethingSpecial'])) {
+
+        apply plugin: 'java'
+
+        sourceCompatibility = 1.7
+
+        ext {
+            activeMqVersion = '5.9.0'
+            apacheSshdVersion = '0.10.1'
+            aspectjVersion = '1.8.0'
+            commonsDigesterVersion = '2.0'
+            commonsDbcpVersion = '1.2.2'
+            commonsFileUploadVersion = '1.2.2'
+            commonsIoVersion = '2.4'
+            commonsLangVersion = '2.6'
+            commonsPoolVersion = '1.5.4'
+            c3p0Version = '0.9.1.2'
+            derbyVersion = '10.10.1.1'
+            hamcrestVersion = '1.3'
+            hibernateVersion = '4.2.11.Final'
+            hibernateValidatorVersion = '4.2.0.Final'
+            ftpServerVersion = '1.0.6'
+            flexjsonVersion = '2.0'
+            groovyVersion = '2.3.0'
+            hsqldbVersion = '2.3.2'
+            h2Version = '1.3.175'
+            jacksonVersion = '2.3.2'
+            jasyptVersion = '1.7'
+            javaxInjectVersion = '1'
+            javaxMailVersion = '1.4.7'
+            jodaTimeVersion = '1.6'
+            jtaVersion = '1.1'
+            jtdsVersion = '1.2.6'
+            jmsApiVersion = '1.1-rev-1'
+            jrubyVersion = '1.7.12'
+            jpaApiVersion = '2.0.0'
+            jstlVersion = '1.2'
+            junitVersion = '4.11'
+            jythonVersion = '2.5.3'
+            log4jVersion = '1.2.17'
+            mockitoVersion = '1.9.5'
+            openJpaVersion = '2.3.0'
+            oracleDriverVersion = '11.2.0.3'
+            reactorSpringVersion = '1.1.3.RELEASE'
+            postgresVersion = '9.1-901-1.jdbc4'
+            subethasmtpVersion = '1.2'
+            slf4jVersion = '1.7.6'
+            springIntegrationVersion = '4.0.4.RELEASE'
+            springIntegration41Version = '4.1.0.M1'
+            springIntegrationDslVersion = '1.0.0.M3'
+            springVersion = '4.0.7.RELEASE'
+            springSecurityVersion = '3.2.4.RELEASE'
+            springWebFlowVersion = '2.3.3.RELEASE'
+            tilesJspVersion = '2.2.1'
+            validationApiVersion = '1.0.0.GA'
+        }
+
+        sourceSets.each {
+            it.resources.srcDirs = ["src/${it.name}/resources", "src/${it.name}/java"]
+        }
+
+        // dependencies that are common across all java projects
+        dependencies {
+            compile "log4j:log4j:$log4jVersion"
+
+            testCompile("junit:junit:$junitVersion") {
+                exclude group: 'org.hamcrest'
+            }
+            testCompile "org.hamcrest:hamcrest-all:$hamcrestVersion"
+            testCompile("org.mockito:mockito-core:$mockitoVersion") {
+                exclude group: 'org.hamcrest'
+            }
+            testCompile "org.springframework:spring-test:$springVersion"
+        }
+
+        // enable all compiler warnings; individual projects may customize further
+        ext.xLintArg = '-Xlint:all,-options'
+        [compileJava, compileTestJava]*.options*.compilerArgs = [xLintArg]
+    }
+
+    task cleanTarget(type: Delete) {
+        delete 'target'
+    }
+
+    clean.dependsOn cleanTarget
+}
+
+project('machine1')
+project('machine2')
+
+project('myrx001')
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '1.12'
+}

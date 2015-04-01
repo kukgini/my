@@ -1,0 +1,7 @@
+rootProject.name = 'my'
+
+include 'm01'
+
+include 'm02'
+
+include 'rx01'
