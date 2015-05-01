@@ -127,6 +127,7 @@ subprojects { subproject ->
 
 project('m01')
 project('m02')
+project('m03') // for testing hsqldb
 project('rx01')
 
 task wrapper(type: Wrapper) {
