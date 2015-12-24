@@ -11,4 +11,6 @@ include 'm03'
 
 include 'rx02'
 include 'rx03'
+include 'm04'
+include 'm05'
 
