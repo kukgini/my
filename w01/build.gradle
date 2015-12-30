@@ -1,0 +1,16 @@
+group 'my'
+version 'unspecified'
+
+apply plugin: 'war'
+apply plugin: 'jetty'
+
+sourceCompatibility = 1.5
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.sitemesh:sitemesh:3.0.1"
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}

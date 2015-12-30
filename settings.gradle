@@ -1,16 +1,16 @@
 rootProject.name = 'my'
 
 include 'm01'
-
 include 'm02'
-
 include 'm03'
-
-include 'rx01'
-include 'm03'
-
-include 'rx02'
-include 'rx03'
 include 'm04'
 include 'm05'
+
+include 'rx01'
+include 'rx02'
+include 'rx03'
+
+include 'b01'
+include 'b02'
+include 'w01'
 
