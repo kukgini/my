@@ -15,18 +15,21 @@ public class BackgroundLogReader {
     public static void main(String[] args) {
         try
         {
-            // clear output directory
-            Files.walk(Paths.get("OUTPUT"))
-                .map(Path::toFile)
-                .filter(File::isFile)
-                .forEach(File::delete);
-            
+            clearOutput();
             new BackgroundLogReader().run();
         } catch (Exception e) {
             e.getMessage();
         }
     }
 
+    // clear previously created output for new execution.
+    private static clearOutput() {
+        Files.walk(Paths.get("OUTPUT"))
+            .map(Path::toFile)
+            .filter(File::isFile)
+            .forEach(File::delete);        
+    }
+    
     private static final String errFilenamePattern = "OUTPUT/ERROUT-%d.txt";
     private static final String oppFilenamePattern = "OUTPUT/OPPOUT-%d.txt";
 
