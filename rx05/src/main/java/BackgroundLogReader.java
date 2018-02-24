@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Stream;
@@ -30,6 +31,8 @@ public class BackgroundLogReader {
             .forEach(File::delete);        
     }
     
+    private static Optional<Boolean> quitSignalReceived = Optional.of(false);
+    
     private static final String errFilenamePattern = "OUTPUT/ERROUT-%d.txt";
     private static final String oppFilenamePattern = "OUTPUT/OPPOUT-%d.txt";
 
@@ -38,22 +41,22 @@ public class BackgroundLogReader {
     private static final String errPrefix = "ERR#";
     private static final String oppPrefix = "OPP#";
 
+    private static final OutputWriter err = new OutputWriter(errFilenamePattern, errPrefix);
+    private static final OutputWriter opp = new OutputWriter(oppFilenamePattern, oppPrefix);
+    private static final OutputWriter[] writers = new OutputWriter[]{err, opp};
+
     // LinkedBlockingQueue is effective when privicer:consumer = n:1
     // https://sungjk.github.io/2016/11/02/Queue.html
     private static final BlockingQueue<Optional<String>> queue = new LinkedBlockingQueue<>();
 
     public void run() throws Exception {
-        OutputWriter err = new OutputWriter(errFilenamePattern, errPrefix).build();
-        OutputWriter opp = new OutputWriter(oppFilenamePattern, oppPrefix).build();
-        OutputWriter[] writers = new OutputWriter[]{err, opp};
 
         Executors.newSingleThreadExecutor().execute(this::readStdin);
         Executors.newSingleThreadExecutor().execute(this::readFile);
 
+        System.out.format("now i will eat queue: current size is: %s %n", queue.size());
         Stream.generate(() -> queue.poll())
-            .filter(x -> x.isPresent())
-            .map(x -> x.get())
-            .filter(x -> exitWhenQuitSignalReceived(x, writers))
+            .map(Optional::get)
             .filter(err::write)
             .filter(opp::write)
             .forEach(this::warnWhenUnknownFormatReceived);
@@ -63,18 +66,31 @@ public class BackgroundLogReader {
         System.err.format("Unknown format: %s%n", x);
     }
     
-    public boolean exitWhenQuitSignalReceived(String s, OutputWriter[] ws) {
+    public boolean exitWhenQuitSignalReceived(String s) {
         if ("Q".equals(s)) {
-            System.out.print("[Q]uit signal received. Exiting...");
-            for(OutputWriter w : ws) {
-                w.close();
-            }
-            System.out.println("OK");
-            System.exit(0);
+            exitWhenQueueDrained();
+            return false;
         }
         return true;
     }
 
+    public void exitWhenQueueDrained() {
+            System.out.println("[Q]uit signal received. Waiting queue drained...");
+            while (queue.size() > 0) {
+                try {
+                    System.out.format("remain queue size is : %d%n", queue.size());
+                    Thread.sleep(10);
+                } 
+                catch (InterruptedException e) {}
+            }
+            System.out.println("Done. Exiting...");
+            for(OutputWriter w : writers) {
+                w.close();
+            }
+            System.out.println("OK");
+            System.exit(0);
+    }
+    
     public void readStdin() {
         readStream(System.in);
     }
@@ -94,6 +110,7 @@ public class BackgroundLogReader {
     public void readStream(InputStream stream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
         java.util.stream.Stream.generate(() -> readLine(reader))
+            .filter(Optional::isPresent)
             .forEach(queue::offer);
     }
 
@@ -101,12 +118,13 @@ public class BackgroundLogReader {
         String result = null;
         try {
             result = reader.readLine();
+            exitWhenQuitSignalReceived(result);
         } 
         catch (IOException e){}
         return Optional.ofNullable(result);
     }
     
-    public class OutputWriter {
+    static public class OutputWriter {
         private int fileIndex = 0;
         private int count = 0;
         private final int capacity = 20;
@@ -117,12 +135,6 @@ public class BackgroundLogReader {
         public OutputWriter(String filenamePattern, String prefix) {
             this.filenamePattern = filenamePattern;
             this.prefix = prefix;
-        }
-
-        public OutputWriter build() throws IOException
-        {
-            openNewWriter();
-            return this;
         }
 
         private void openNewWriter() throws IOException {
@@ -136,8 +148,12 @@ public class BackgroundLogReader {
         public boolean write(String s) {
             try
             {
+                if (writer == null) {
+                    openNewWriter();
+                }
                 if (s != null && s.startsWith(prefix))
                 {
+                    //System.out.format("writing %s, current queue size: %d %n", prefix, queue.size());
                     count++;
                     if (count > capacity) {
                         count = 1;

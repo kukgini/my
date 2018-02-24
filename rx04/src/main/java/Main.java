@@ -6,7 +6,8 @@ import java.util.concurrent.*;
 public class Main {
     
     private static final LinkedBlockingQueue<Integer> queue = new LinkedBlockingQueue<>();
-    private static Supplier<Stream<Integer>> supplier = () -> Stream.generate(queue::poll);
+    private static Supplier<Stream<Integer>> supplier =
+        () -> Stream.generate(queue::poll).filter(x -> x != null);
     
     public static void main(String[] args) {
         System.err.println("now i will make a provider.");
@@ -34,7 +35,6 @@ public class Main {
     
     private static void consume() {
         supplier.get()
-            .filter(x -> x != null)
             .map(x -> String.format("consumer[%s] %d",Thread.currentThread().getId(), x))
             .forEach(System.out::println);
     }
