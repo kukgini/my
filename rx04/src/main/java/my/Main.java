@@ -18,7 +18,7 @@ public class Main {
         int numOfConsumerThreads = 4;
         ExecutorService executors = Executors.newFixedThreadPool(numOfConsumerThreads);
     	for (int i = 0; i < numOfConsumerThreads; i++) {
-    		executors.execute(consume());
+    		executors.execute(Main::consume);
     	}
     }
     
@@ -33,14 +33,10 @@ public class Main {
         }        
     }
     
-    private static Runnable consume() {
-        return new Runnable() {
-            public void run() {
-                supplier.get()
-                    .filter(x -> x != null)
-                    .map(x -> String.format("consumer[%s] %d",Thread.currentThread().getId(), x))
-                    .forEach(System.out::println);
-            }
-        };
+    private static void consume() {
+        supplier.get()
+            .filter(x -> x != null)
+            .map(x -> String.format("consumer[%s] %d",Thread.currentThread().getId(), x))
+            .forEach(System.out::println);
     }
 }
