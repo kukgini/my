@@ -15,30 +15,30 @@ public class Main {
         new Thread(Main::provide).start();
         
         System.err.println("now i will make multiple consumers.");
-        int numOfConsumerThreads = 2;
+        int numOfConsumerThreads = 4;
         ExecutorService executors = Executors.newFixedThreadPool(numOfConsumerThreads);
     	for (int i = 0; i < numOfConsumerThreads; i++) {
-    		executors.execute(consume(i));
+    		executors.execute(consume());
     	}
     }
     
     private static void provide() {
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10000; i++) {
             try {
                 queue.offer(i);
-                Thread.sleep(2000);
+                Thread.sleep(5);
             } catch (InterruptedException e) {
                 
             }
         }        
     }
     
-    private static Runnable consume(final int i) {
+    private static Runnable consume() {
         return new Runnable() {
             public void run() {
                 supplier.get()
                     .filter(x -> x != null)
-                    .map(x -> String.format("consumer %s = %d",i, x))
+                    .map(x -> String.format("consumer[%s] %d",Thread.currentThread().getId(), x))
                     .forEach(System.out::println);
             }
         };
