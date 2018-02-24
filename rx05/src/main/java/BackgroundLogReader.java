@@ -23,7 +23,7 @@ public class BackgroundLogReader {
     }
 
     // clear previously created output for new execution.
-    private static clearOutput() {
+    private static void clearOutput() throws IOException {
         Files.walk(Paths.get("OUTPUT"))
             .map(Path::toFile)
             .filter(File::isFile)
@@ -56,9 +56,13 @@ public class BackgroundLogReader {
             .filter(x -> exitWhenQuitSignalReceived(x, writers))
             .filter(err::write)
             .filter(opp::write)
-            .forEach(x -> System.err.format("Unknown format: %s%n", x));
+            .forEach(this::warnWhenUnknownFormatReceived);
     }
 
+    public void warnWhenUnknownFormatReceived(String x) {
+        System.err.format("Unknown format: %s%n", x);
+    }
+    
     public boolean exitWhenQuitSignalReceived(String s, OutputWriter[] ws) {
         if ("Q".equals(s)) {
             System.out.print("[Q]uit signal received. Exiting...");
@@ -105,6 +109,7 @@ public class BackgroundLogReader {
     public class OutputWriter {
         private int fileIndex = 0;
         private int count = 0;
+        private final int capacity = 20;
         private String filenamePattern;
         private String prefix;
         private PrintWriter writer;
@@ -134,7 +139,7 @@ public class BackgroundLogReader {
                 if (s != null && s.startsWith(prefix))
                 {
                     count++;
-                    if (count > 20) {
+                    if (count > capacity) {
                         count = 1;
                         fileIndex++;
                         openNewWriter();
