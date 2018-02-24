@@ -44,8 +44,8 @@ public class BackgroundLogReader {
         OutputWriter opp = new OutputWriter(oppFilenamePattern, oppPrefix).build();
         OutputWriter[] writers = new OutputWriter[]{err, opp};
 
-        Executors.newSingleThreadExecutor().execute(this::readStdinInBackground);
-        Executors.newSingleThreadExecutor().execute(this::readFileInBackground);
+        Executors.newSingleThreadExecutor().execute(this::readStdin);
+        Executors.newSingleThreadExecutor().execute(this::readFile);
 
         Stream.generate(() -> queue.poll())
             .filter(x -> x.isPresent())
@@ -68,23 +68,23 @@ public class BackgroundLogReader {
         return true;
     }
 
-    public void readStdinInBackground() {
-        readStreamInBackground(System.in);
+    public void readStdin() {
+        readStream(System.in);
     }
 
-    public void readFileInBackground() {
+    public void readFile() {
         try
         {
             RandomAccessFile file = new RandomAccessFile(inputFilename, "r");
             //file.seek(file.length()); // move to end of file.
             InputStream is = Channels.newInputStream(file.getChannel());
-            readStreamInBackground(is);
+            readStream(is);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void readStreamInBackground(InputStream stream) {
+    public void readStream(InputStream stream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
         java.util.stream.Stream.generate(() -> readLine(reader)).forEach(queue::offer);
     }
