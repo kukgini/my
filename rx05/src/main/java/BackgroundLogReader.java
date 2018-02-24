@@ -53,7 +53,7 @@ public class BackgroundLogReader {
             .filter(x -> exitWhenQuitSignalReceived(x, writers))
             .filter(err::write)
             .filter(opp::write)
-            .forEach(x -> System.err.format("? %s%n", x));
+            .forEach(x -> System.err.format("Unknown format: %s%n", x));
     }
 
     public boolean exitWhenQuitSignalReceived(String s, OutputWriter[] ws) {
