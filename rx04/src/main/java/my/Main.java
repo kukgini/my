@@ -12,13 +12,14 @@ public class Main {
     
     public static void main(String[] args) {
         System.err.println("now i will make a provider.");
-        new Thread(Main::provide).start();
+        ExecutorService provideExecutor = Executors.newSingleThreadExecutor();
+        provideExecutor.execute(Main::provide);
         
         System.err.println("now i will make multiple consumers.");
         int numOfConsumerThreads = 4;
-        ExecutorService executors = Executors.newFixedThreadPool(numOfConsumerThreads);
+        ExecutorService consumerExecutor = Executors.newFixedThreadPool(numOfConsumerThreads);
     	for (int i = 0; i < numOfConsumerThreads; i++) {
-    		executors.execute(Main::consume);
+    		consumerExecutor.execute(Main::consume);
     	}
     }
     
