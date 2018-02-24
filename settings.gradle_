@@ -9,6 +9,7 @@ include 'm05'
 include 'rx01'
 include 'rx02'
 include 'rx03'
+include 'rx04'
 
 include 'b01'
 include 'b02'
