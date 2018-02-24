@@ -86,10 +86,11 @@ public class BackgroundLogReader {
 
     public void readStream(InputStream stream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-        java.util.stream.Stream.generate(() -> readLine(reader)).forEach(queue::offer);
+        java.util.stream.Stream.generate(() -> readLine(reader))
+            .forEach(queue::offer);
     }
 
-    private static Optional<String> readLine(BufferedReader reader) {
+    private Optional<String> readLine(BufferedReader reader) {
         String result = null;
         try {
             result = reader.readLine();
