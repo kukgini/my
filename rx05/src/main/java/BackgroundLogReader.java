@@ -66,29 +66,28 @@ public class BackgroundLogReader {
         System.err.format("Unknown format: %s%n", x);
     }
     
-    public boolean exitWhenQuitSignalReceived(String s) {
+    public void exitWhenQuitSignalReceived(String s) {
         if ("Q".equals(s)) {
-            exitWhenQueueDrained();
-            return false;
-        }
-        return true;
-    }
-
-    public void exitWhenQueueDrained() {
             System.out.println("[Q]uit signal received. Waiting queue drained...");
-            while (queue.size() > 0) {
-                try {
-                    System.out.format("remain queue size is : %d%n", queue.size());
-                    Thread.sleep(10);
-                } 
-                catch (InterruptedException e) {}
-            }
+            waitingQueueDrained();
             System.out.println("Done. Exiting...");
             for(OutputWriter w : writers) {
                 w.close();
             }
             System.out.println("OK");
             System.exit(0);
+        }
+    }
+
+    public void waitingQueueDrained() {
+        while (queue.size() > 0) {
+            try {
+                System.out.format("remain queue size is : %d%n", queue.size());
+                Thread.sleep(10);
+            } 
+            catch (InterruptedException e) {}
+        }
+
     }
     
     public void readStdin() {
@@ -109,9 +108,12 @@ public class BackgroundLogReader {
 
     public void readStream(InputStream stream) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+        try {
         java.util.stream.Stream.generate(() -> readLine(reader))
             .filter(Optional::isPresent)
             .forEach(queue::offer);
+        } 
+        catch (RuntimeException e) {}
     }
 
     private Optional<String> readLine(BufferedReader reader) {
