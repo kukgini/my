@@ -133,6 +133,7 @@ project('rx04')
 project('rx05')
 project('rx06')
 project('rx07')
+project('rx08')
 
 task wrapper(type: Wrapper) {
     gradleVersion = '1.12'

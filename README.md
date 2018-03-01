@@ -11,4 +11,6 @@
 # rx06 - Java Simple Producer Multiple Consumer (Again)
 # rx07 - Java Simple Producer Multiple Consumer (Refactoring)
 
+# rx08 - Java Test : BackgroudLogReader (Refactoring)
+
 #w01 - Sitemesh 3 test

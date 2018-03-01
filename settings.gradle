@@ -13,6 +13,7 @@ include 'rx04'
 include 'rx05'
 include 'rx06'
 include 'rx07'
+include 'rx08'
 
 include 'w01'
 
