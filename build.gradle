@@ -129,6 +129,9 @@ project('m01')
 project('m02')
 project('m03') // for testing hsqldb
 project('rx01')
+project('rx04')
+project('rx05')
+project('rx06')
 
 task wrapper(type: Wrapper) {
     gradleVersion = '1.12'
