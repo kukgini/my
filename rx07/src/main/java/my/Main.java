@@ -1,12 +1,11 @@
 package my;
 
-import java.util.Observable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+// 마지막 몇개가 제재로 처리되지 않는 문제가 있음.
 public class Main {
     private static final LinkedBlockingQueue<Integer> queue1 = new LinkedBlockingQueue<>();
     private static final LinkedBlockingQueue<Integer> queue2 = new LinkedBlockingQueue<>();
