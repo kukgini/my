@@ -20,14 +20,6 @@ public class BackgroundLogReader {
         }
     }
 
-    // clear previously created output for new execution.
-    private static void clearOutput() throws IOException {
-        Files.walk(Paths.get("OUTPUT"))
-            .map(Path::toFile)
-            .filter(File::isFile)
-            .forEach(File::delete);        
-    }
-
     private static final String errFilenamePattern = "OUTPUT/ERROUT-%02d.txt";
     private static final String oppFilenamePattern = "OUTPUT/OPPOUT-%02d.txt";
     private static final String inputFilename = "INPUT/INPUT.txt";
@@ -51,6 +43,14 @@ public class BackgroundLogReader {
         spliter.addTask((x) -> x.startsWith("ERR#"), (x) -> x.substring("ERR#".length()), errWriter::write);
         spliter.addTask((x) -> x.startsWith("OPP#"), (x) -> x.substring("OPP#".length()), oppWriter::write);
         spliter.run();
+    }
+
+    // clear previously created output for new execution.
+    private static void clearOutput() throws IOException {
+        Files.walk(Paths.get("OUTPUT"))
+            .map(Path::toFile)
+            .filter(File::isFile)
+            .forEach(File::delete);
     }
 
     private static boolean delay(int i) {
