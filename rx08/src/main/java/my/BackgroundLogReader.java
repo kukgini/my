@@ -40,8 +40,14 @@ public class BackgroundLogReader {
         OutputWriter oppWriter = new OutputWriter(oppFilenamePattern);
 
         QueueSpliter spliter = new QueueSpliter(input.output());
-        spliter.addTask((x) -> x.startsWith("ERR#"), (x) -> x.substring("ERR#".length()), errWriter::write);
-        spliter.addTask((x) -> x.startsWith("OPP#"), (x) -> x.substring("OPP#".length()), oppWriter::write);
+        spliter.addTask(new Task(
+            x -> x.startsWith("ERR#"),
+            x -> x.substring("ERR#".length()),
+            errWriter::write));
+        spliter.addTask(new Task(
+            x -> x.startsWith("OPP#"),
+            x -> x.substring("OPP#".length()),
+            oppWriter::write));
         spliter.run();
     }
 

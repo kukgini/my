@@ -10,15 +10,8 @@ import java.util.stream.Stream;
 
 public class QueueSpliter
 {
-    private static final String errPrefix = "ERR#";
-    private static final String oppPrefix = "OPP#";
-
     private BlockingQueue<String> input;
-
-    private List<Function<String, Boolean>> conditions = new ArrayList<>();
-    private List<Function<String, String>> manifulators = new ArrayList<> ();
-    private List<Function<String, String>> tasks = new ArrayList<>();
-    private List<BlockingQueue<String>> outputs = new ArrayList<>();
+    private List<Task> tasks = new ArrayList<>();
 
     public QueueSpliter(BlockingQueue<String> input) {
         this.input = input;
@@ -30,30 +23,17 @@ public class QueueSpliter
                 if (s.equals("Q")) {
                     QuitSignal.close();
                 }
-                for(int i = 0; i < conditions.size(); i++) {
-                    Function<String, Boolean> condition = conditions.get(i);
-                    if (condition.apply(s)) {
-                        if (s.startsWith("OPP#")) {
-                            System.out.println();
-                        }
-                        Function<String, String> manifulator = manifulators.get(i);
-                        outputs.get(i).offer(manifulator.apply(s));
+                for(int i = 0; i < tasks.size(); i++) {
+                    Task task = tasks.get(i);
+                    if (task.isMatch(s))
+                    {
+                        task.offer(s);
                     }
-
                 }
             });
     }
 
-    public void addTask(Function<String, Boolean> condition, Function<String, String> manifulator, Function<String, String> task) {
-        conditions.add(condition);
-        manifulators.add(manifulator);
+    public void addTask(Task task) {
         tasks.add(task);
-        BlockingQueue<String> output = new LinkedBlockingQueue<String>();
-        runFunctionInBackground(output, task);
-        outputs.add(output);
-    }
-
-    private void runFunctionInBackground(BlockingQueue<String> q, Function<String,String> f) {
-        Executors.newSingleThreadExecutor().execute(() -> Stream.generate(q::poll).filter(x -> x != null).forEach(f::apply));
     }
 }
