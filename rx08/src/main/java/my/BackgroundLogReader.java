@@ -14,7 +14,7 @@ import java.util.stream.StreamSupport;
 public class BackgroundLogReader {
 
     public static void main(String[] args) {
-        clearDirThenRun.accept(outputDir, () -> run());
+        cleanDirThenRun.accept(outputDir, () -> run());
     }
 
     public static void run() {
@@ -47,7 +47,7 @@ public class BackgroundLogReader {
         System.out.println("system exit.");
     }
 
-    public static final BiConsumer<String, Runnable> clearDirThenRun = (dir, run) -> {
+    public static final BiConsumer<String, Runnable> cleanDirThenRun = (dir, run) -> {
         try {
             String current = new java.io.File(dir).getCanonicalPath();
             System.out.println("Cleaning dir:" + current);
@@ -71,9 +71,8 @@ public class BackgroundLogReader {
 
     // LinkedBlockingQueue is effective when privicer:consumer = n:1
     // https://sungjk.github.io/2016/11/02/Queue.html
-    private  static final int TIME_OUT = 60000; // 60 sec
     private static final BlockingQueue<String> queue = new LinkedBlockingQueue<>();
-    private static final Stream<String> stream = StreamSupport.stream(new QueueSpliterator(queue, TIME_OUT), false);
+    private static final Stream<String> stream = StreamSupport.stream(new QueueSpliterator(queue), false);
     private static boolean quit = false;
     private static CountDownLatch latch = new CountDownLatch(1);
     public static Supplier<Boolean> needQuit = () -> quit == true;

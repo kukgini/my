@@ -7,11 +7,9 @@ import java.util.function.Consumer;
 
 public class QueueSpliterator<T> implements Spliterator<T> {
     private final BlockingQueue<T> queue;
-    private final long timeoutMs;
 
-    public QueueSpliterator(final BlockingQueue<T> queue, final long timeoutMs) {
+    public QueueSpliterator(final BlockingQueue<T> queue) {
         this.queue = queue;
-        this.timeoutMs = timeoutMs;
     }
 
     @Override
@@ -27,7 +25,7 @@ public class QueueSpliterator<T> implements Spliterator<T> {
     @Override
     public boolean tryAdvance(final Consumer<? super T> action) {
         try {
-            final T next = this.queue.poll(this.timeoutMs, TimeUnit.MILLISECONDS);
+            final T next = this.queue.take();
             if (next == null) {
                 return false;
             }
@@ -42,5 +40,4 @@ public class QueueSpliterator<T> implements Spliterator<T> {
     public Spliterator<T> trySplit() {
         return null;
     }
-
 }
