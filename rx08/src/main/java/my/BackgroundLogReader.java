@@ -1,7 +1,6 @@
 package my;
 
 import java.io.*;
-import java.nio.Buffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
@@ -15,21 +14,60 @@ import java.util.stream.StreamSupport;
 public class BackgroundLogReader {
 
     public static void main(String[] args) {
-        try
-        {
-            clearOutput();
-            run();
-        } catch (Exception e) {
-            e.getMessage();
-        }
+        clearDirThenRun.accept(outputDir, () -> run());
     }
 
+    public static void run() {
+        executors.submit(() -> stream
+                .filter(errProcessor)
+                .filter(oppProcessor)
+                .forEach(e -> System.out.format("Unknown Format:%s%n", e)));
+
+        BufferedReader r1 = inputStreamToBufferedReader.apply(System.in);
+        executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r1), 10));
+
+        try (RandomAccessFile file = new RandomAccessFile(inputFilename, "r");
+             BufferedReader r2 = fileChannelToBufferedReader.apply(file.getChannel());
+        ){
+            //file.seek(file.length()); // move to end of file.
+            executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r2), 10));
+            latch.await();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        waitUntil(needQuit,10);
+        waitUntil(queueDrained, 10);
+
+        oppWriter.close();
+        errWriter.close();
+        stream.close();
+        executors.shutdownNow();
+
+        System.out.println("system exit.");
+    }
+
+    public static final BiConsumer<String, Runnable> clearDirThenRun = (dir, run) -> {
+        try {
+            String current = new java.io.File(dir).getCanonicalPath();
+            System.out.println("Cleaning dir:" + current);
+            Files.walk(Paths.get(dir))
+                    .map(Path::toFile)
+                    .filter(File::isFile)
+                    .forEach(File::delete);
+            run.run();
+        } catch (IOException e) {
+            System.out.println("outputDir cleaning failed.");
+        }
+    };
     private static final String workingDir = "rx08";
     private static final String inputDir = workingDir + "/INPUT";
     private static final String outputDir = workingDir + "/OUTPUT";
     private static final String errFilenamePattern = outputDir + "/ERROUT-%02d.txt";
     private static final String oppFilenamePattern = outputDir + "/OPPOUT-%02d.txt";
     private static final String inputFilename = inputDir + "/INPUT.txt";
+    public static Function<InputStream, BufferedReader> inputStreamToBufferedReader = (x) -> new BufferedReader(new InputStreamReader(x));
+    public static Function<FileChannel, BufferedReader> fileChannelToBufferedReader = (x) -> new BufferedReader(new InputStreamReader(Channels.newInputStream(x)));
 
     // LinkedBlockingQueue is effective when privicer:consumer = n:1
     // https://sungjk.github.io/2016/11/02/Queue.html
@@ -38,11 +76,17 @@ public class BackgroundLogReader {
     private static final Stream<String> stream = StreamSupport.stream(new QueueSpliterator(queue, TIME_OUT), false);
     private static boolean quit = false;
     private static CountDownLatch latch = new CountDownLatch(1);
-    public static Supplier<Boolean> quitSignalReceived = () -> quit == true;
+    public static Supplier<Boolean> needQuit = () -> quit == true;
     public static Runnable sendQuitSignal = () -> {quit = true; latch.countDown();};
     public static Supplier<Boolean> queueDrained = () -> queue.size() == 0;
-    public static Function<InputStream, BufferedReader> inputStreamToBufferedReader = (x) -> new BufferedReader(new InputStreamReader(x));
-    public static Function<FileChannel, BufferedReader> fileChannelToBufferedReader = (x) -> new BufferedReader(new InputStreamReader(Channels.newInputStream(x)));
+    public static Predicate<String> quitSignalReceived = (s) -> {
+        if ("Q".equals(s)) {
+            sendQuitSignal.run();
+            return true;
+        } else {
+            return false;
+        }
+    };
     public static final String ERR_PREFIX = "ERR#";
     public static final String OPP_PREFIX = "OPP#";
     public static OutputWriter errWriter = new OutputWriter(errFilenamePattern);
@@ -65,46 +109,7 @@ public class BackgroundLogReader {
     };
     private static final ExecutorService executors = Executors.newCachedThreadPool();
 
-    public static void run() {
-        executors.submit(() -> stream
-                .filter(errProcessor)
-                .filter(oppProcessor)
-                .forEach(e -> System.out.format("Unknown Format:%s%n", e)));
 
-        BufferedReader r1 = inputStreamToBufferedReader.apply(System.in);
-        executors.submit(() -> doUntil(quitSignalReceived, () -> streamToQueue(r1, queue), 10));
-
-        try (RandomAccessFile file = new RandomAccessFile(inputFilename, "r");
-             BufferedReader r2 = fileChannelToBufferedReader.apply(file.getChannel());
-        ){
-            //file.seek(file.length()); // move to end of file.
-            executors.submit(() -> doUntil(quitSignalReceived, () ->streamToQueue(r2, queue), 10));
-            latch.await();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        waitUntil(quitSignalReceived,10);
-        waitUntil(queueDrained, 10);
-
-        stream.close();
-        executors.shutdownNow();
-
-        System.out.println("system exit.");
-
-
-
-    }
-
-    // clear previously created output for new execution.
-    private static void clearOutput() throws IOException {
-        String current = new java.io.File( outputDir ).getCanonicalPath();
-        System.out.println("Current dir:"+current);
-        Files.walk(Paths.get(outputDir))
-            .map(Path::toFile)
-            .filter(File::isFile)
-            .forEach(File::delete);
-    }
 
     private static boolean delay(int i) {
         try {Thread.sleep(i);} catch (InterruptedException e) {}
@@ -140,26 +145,15 @@ public class BackgroundLogReader {
         try { Thread.sleep(millisec); } catch (InterruptedException e) {}
     }
 
-    public static void streamToQueue(BufferedReader reader, BlockingQueue<String> queue) {
-        if (quitSignalReceived.get() == false) {
+    public static void streamToQueue(BufferedReader reader) {
+        if (needQuit.get() == false) {
             try {
                 String s = reader.readLine();
-                if ("Q".equals(s)) {
-                    sendQuitSignal.run();
-                } else if (s != null){
+                if (quitSignalReceived.test(s) == false) {
                     queue.offer(s);
                 }
             }
             catch (IOException e) {}
         }
-    }
-
-    private static String readLine(BufferedReader reader) {
-        String result = null;
-        try {
-            result = reader.readLine();
-        }
-        catch (IOException e){e.printStackTrace();}
-        return result;
-    }
+    };
 }

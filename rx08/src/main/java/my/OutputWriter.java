@@ -38,6 +38,7 @@ public class OutputWriter {
                 openNewWriter();
             }
             writer.println(s);
+            writer.flush();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
