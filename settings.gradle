@@ -15,5 +15,7 @@ include 'rx06'
 include 'rx07'
 include 'rx08'
 
+include 'SumOfK'
+
 include 'w01'
 
