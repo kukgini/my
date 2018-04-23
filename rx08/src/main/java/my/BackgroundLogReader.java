@@ -115,8 +115,10 @@ public class BackgroundLogReader {
         if (s.startsWith(ERR_PREFIX) == true) {
             errCount++;
         } else if (s.startsWith(OPP_PREFIX) == true) {
+            if (errCount > 3) {
+                System.out.format("정상 로그가 들어왔습니다. Alert 이 꺼집니다.%n", errCount);
+            }
             errCount = 0;
-            System.out.format("정상 로그가 들어왔습니다. Alert 이 꺼집니다.%n", errCount);
         }
         if (errCount > 3) {
             System.out.format("Alert : error count 가 %s 회를 넘었습니다.%n", errCount);
