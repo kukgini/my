@@ -28,19 +28,19 @@ public class BackgroundLogReader {
              FileChannel fileChannel = file.getChannel();
         ){
             BufferedReader r1 = stdInToBufferedReader.get();
-            executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r1), 10));
+            executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r1), sleepShortly));
 
             //file.seek(file.length()); // move to end of file.
             BufferedReader r2 = fileChannelToBufferedReader.apply(file.getChannel());
-            executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r2), 10));
+            executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r2), sleepShortly));
 
             latch.await();
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        waitUntil(needQuit,10);
-        waitUntil(queueDrained, 10);
+        doUntil(needQuit, nothing, sleepShortly);
+        doUntil(queueDrained, nothing, sleepShortly);
 
         oppWriter.close();
         errWriter.close();
@@ -127,39 +127,17 @@ public class BackgroundLogReader {
     };
     private static final ExecutorService executors = Executors.newCachedThreadPool();
 
-    private static boolean delay(int i) {
-        try {Thread.sleep(i);} catch (InterruptedException e) {}
-        return true;
-    }
-
-    public static void doWhile(Supplier<Boolean> condition, Runnable r, int interval) {
-        while(condition.get()) {
-            r.run();
-            sleep(interval);
-        }
-    }
-
-    public static void doUntil(Supplier<Boolean> condition, Runnable r, int interval) {
+    public static void doUntil(Supplier<Boolean> condition, Runnable r, Runnable idleTask) {
         while(condition.get() == false) {
             r.run();
-            sleep(interval);
+            idleTask.run();
         }
     }
 
-    public static void doAfter(int delay, Runnable r) {
-        sleep(delay);
-        r.run();
-    }
-
-    public static void waitUntil(Supplier<Boolean> condition, int interval) {
-        while(condition.get() == false) {
-            sleep(interval);
-        }
-    }
-
-    public static void sleep(int millisec) {
-        try { Thread.sleep(millisec); } catch (InterruptedException e) {}
-    }
+    public static Runnable nothing = () -> {};
+    public static Runnable sleepShortly = () -> {
+        try { Thread.sleep(10); } catch (InterruptedException e) {}
+    };
 
     public static void streamToQueue(BufferedReader reader) {
         try {
