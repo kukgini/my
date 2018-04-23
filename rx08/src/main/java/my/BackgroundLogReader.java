@@ -18,31 +18,23 @@ public class BackgroundLogReader {
     }
 
     public static void run() {
-        executors.submit(() -> stream
-                .filter(errProcessor)
-                .filter(oppProcessor)
-                .forEach(e -> System.out.format("Unknown Format:%s%n", e)));
-
-        BufferedReader r1 = inputStreamToBufferedReader.apply(System.in);
-        executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r1), 10));
+        StreamGenerator sg = new StreamGenerator();
 
         try (RandomAccessFile file = new RandomAccessFile(inputFilename, "r");
-             BufferedReader r2 = fileChannelToBufferedReader.apply(file.getChannel());
+             FileChannel channel = file.getChannel();
         ){
             //file.seek(file.length()); // move to end of file.
-            executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r2), 10));
-            latch.await();
+            sg.addInput(System.in);
+            sg.addInput(channel);
+            sg.build(needQuit, streamProcessor, () -> waitUntil(queueDrained, 10))
+                    .filter(errProcessor)
+                    .filter(oppProcessor)
+                    .forEach(e -> System.out.format("Unknown Format:%s%n", e));
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        waitUntil(needQuit,10);
-        waitUntil(queueDrained, 10);
-
         oppWriter.close();
         errWriter.close();
-        stream.close();
-        executors.shutdownNow();
 
         System.out.println("system exit.");
     }
@@ -74,10 +66,18 @@ public class BackgroundLogReader {
     private static final BlockingQueue<String> queue = new LinkedBlockingQueue<>();
     private static final Stream<String> stream = StreamSupport.stream(new QueueSpliterator(queue), false);
     private static boolean quit = false;
-    private static CountDownLatch latch = new CountDownLatch(1);
     public static Supplier<Boolean> needQuit = () -> quit == true;
-    public static Runnable sendQuitSignal = () -> {quit = true; latch.countDown();};
+    public static Runnable sendQuitSignal = () -> quit = true;
     public static Supplier<Boolean> queueDrained = () -> queue.size() == 0;
+    public static Function<String, String> streamProcessor = (s) -> {
+        if (s == null) return null;
+        if ("Q".equals(s)) {
+            sendQuitSignal.run();
+            return null;
+        } else {
+            return s;
+        }
+    };
     public static Predicate<String> quitSignalReceived = (s) -> {
         if ("Q".equals(s)) {
             sendQuitSignal.run();
@@ -134,6 +134,9 @@ public class BackgroundLogReader {
         r.run();
     }
 
+    public static void waitUntil(Supplier<Boolean> condition) {
+        waitUntil(condition, 10);
+    }
     public static void waitUntil(Supplier<Boolean> condition, int interval) {
         while(condition.get() == false) {
             sleep(interval);

@@ -25,13 +25,13 @@ public class QueueSpliterator<T> implements Spliterator<T> {
     @Override
     public boolean tryAdvance(final Consumer<? super T> action) {
         try {
-            final T next = this.queue.take();
+            final T next = this.queue.poll();
             if (next == null) {
                 return false;
             }
             action.accept(next);
             return true;
-        } catch (final InterruptedException e) {
+        } catch (final Exception e) {
             throw new RuntimeException("interrupted", e);
         }
     }
