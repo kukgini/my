@@ -28,20 +28,19 @@ public class BackgroundLogReader {
              FileChannel fileChannel = file.getChannel();
         ){
             BufferedReader r1 = stdInToBufferedReader.get();
-            executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r1), sleepShortly));
+            executors.submit(() -> doUntil(quitFlagged, () -> streamToQueue(r1), sleepShortly));
 
             //file.seek(file.length()); // move to end of file.
             BufferedReader r2 = fileChannelToBufferedReader.apply(fileChannel);
-            executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r2), sleepShortly));
+            executors.submit(() -> doUntil(quitFlagged, () -> streamToQueue(r2), sleepShortly));
 
-            //latch.await();
+            doUntil(quitFlagged, nothing, sleepShortly);
+            doUntil(queueDrained, nothing, sleepShortly);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        doUntil(needQuit, nothing, sleepShortly);
-        doUntil(queueDrained, nothing, sleepShortly);
-
+        executors.shutdownNow();
         oppWriter.close();
         errWriter.close();
 
@@ -76,21 +75,13 @@ public class BackgroundLogReader {
     private static final BlockingQueue<String> queue = new LinkedBlockingQueue<>();
     private static final Stream<String> stream = StreamSupport.stream(new QueueSpliterator(queue), false);
     private static boolean quit = false;
-    public static Supplier<Boolean> needQuit = () -> quit == true;
-    public static Runnable sendQuitSignal = () -> quit = true;
+
+    public static Supplier<Boolean> quitFlagged = () -> quit == true;
+    public static Runnable setQuitFlag = () -> quit = true;
     public static Supplier<Boolean> queueDrained = () -> queue.size() == 0;
-    public static Function<String, String> streamProcessor = (s) -> {
-        if (s == null) return null;
-        if ("Q".equals(s)) {
-            sendQuitSignal.run();
-            return null;
-        } else {
-            return s;
-        }
-    };
     public static Predicate<String> quitSignalReceived = (s) -> {
         if ("Q".equals(s)) {
-            sendQuitSignal.run();
+            setQuitFlag.run();
             return true;
         } else {
             return false;
@@ -152,6 +143,6 @@ public class BackgroundLogReader {
                 queue.offer(s);
             }
         }
-        catch (IOException e) {}
+        catch (IOException e) {e.printStackTrace();}
     };
 }
