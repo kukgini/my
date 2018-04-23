@@ -14,32 +14,41 @@ import java.util.stream.StreamSupport;
 public class BackgroundLogReader {
 
     public static void main(String[] args) {
-        cleanDirThenRun.accept(outputDir, () -> run());
+        cleanDirThenRun(outputDir, () -> run());
     }
 
     public static void run() {
-        StreamGenerator sg = new StreamGenerator();
+        executors.submit(() -> stream
+                .filter(errAlerm)
+                .filter(errProcessor)
+                .filter(oppProcessor)
+                .forEach(e -> System.out.format("Unknown Format:%s%n", e)));
 
         try (RandomAccessFile file = new RandomAccessFile(inputFilename, "r");
-             FileChannel channel = file.getChannel();
+             FileChannel fileChannel = file.getChannel();
         ){
+            BufferedReader r1 = stdInToBufferedReader.get();
+            executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r1), sleepShortly));
+
             //file.seek(file.length()); // move to end of file.
-            sg.addInput(System.in);
-            sg.addInput(channel);
-            sg.build(needQuit, streamProcessor, () -> waitUntil(queueDrained, 10))
-                    .filter(errProcessor)
-                    .filter(oppProcessor)
-                    .forEach(e -> System.out.format("Unknown Format:%s%n", e));
+            BufferedReader r2 = fileChannelToBufferedReader.apply(fileChannel);
+            executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r2), sleepShortly));
+
+            //latch.await();
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        doUntil(needQuit, nothing, sleepShortly);
+        doUntil(queueDrained, nothing, sleepShortly);
+
         oppWriter.close();
         errWriter.close();
 
         System.out.println("system exit.");
     }
 
-    public static final BiConsumer<String, Runnable> cleanDirThenRun = (dir, run) -> {
+    public static final void cleanDirThenRun(String dir, Runnable run) {
         try {
             String current = new java.io.File(dir).getCanonicalPath();
             System.out.println("Cleaning dir:" + current);
@@ -58,6 +67,7 @@ public class BackgroundLogReader {
     private static final String errFilenamePattern = outputDir + "/ERROUT-%02d.txt";
     private static final String oppFilenamePattern = outputDir + "/OPPOUT-%02d.txt";
     private static final String inputFilename = inputDir + "/INPUT.txt";
+    public static Supplier<BufferedReader> stdInToBufferedReader = () -> new BufferedReader(new InputStreamReader(System.in));
     public static Function<InputStream, BufferedReader> inputStreamToBufferedReader = (x) -> new BufferedReader(new InputStreamReader(x));
     public static Function<FileChannel, BufferedReader> fileChannelToBufferedReader = (x) -> new BufferedReader(new InputStreamReader(Channels.newInputStream(x)));
 
@@ -106,56 +116,42 @@ public class BackgroundLogReader {
             return false;
         }
     };
+    public static int errCount = 0;
+    public static Predicate<String> errAlerm = (s) -> {
+        if (s.startsWith(ERR_PREFIX) == true) {
+            errCount++;
+        } else if (s.startsWith(OPP_PREFIX) == true) {
+            if (errCount > 3) {
+                System.out.format("정상 로그가 들어왔습니다. Alert 이 꺼집니다.%n", errCount);
+            }
+            errCount = 0;
+        }
+        if (errCount > 3) {
+            System.out.format("Alert : error count 가 %s 회를 넘었습니다.%n", errCount);
+        }
+        return true;
+    };
     private static final ExecutorService executors = Executors.newCachedThreadPool();
 
-
-
-    private static boolean delay(int i) {
-        try {Thread.sleep(i);} catch (InterruptedException e) {}
-        return true;
-    }
-
-    public static void doWhile(Supplier<Boolean> condition, Runnable r, int interval) {
-        while(condition.get()) {
-            r.run();
-            sleep(interval);
-        }
-    }
-
-    public static void doUntil(Supplier<Boolean> condition, Runnable r, int interval) {
+    public static void doUntil(Supplier<Boolean> condition, Runnable r, Runnable idleTask) {
         while(condition.get() == false) {
             r.run();
-            sleep(interval);
+            idleTask.run();
         }
     }
 
-    public static void doAfter(int delay, Runnable r) {
-        sleep(delay);
-        r.run();
-    }
-
-    public static void waitUntil(Supplier<Boolean> condition) {
-        waitUntil(condition, 10);
-    }
-    public static void waitUntil(Supplier<Boolean> condition, int interval) {
-        while(condition.get() == false) {
-            sleep(interval);
-        }
-    }
-
-    public static void sleep(int millisec) {
-        try { Thread.sleep(millisec); } catch (InterruptedException e) {}
-    }
+    public static Runnable nothing = () -> {};
+    public static Runnable sleepShortly = () -> {
+        try { Thread.sleep(10); } catch (InterruptedException e) {}
+    };
 
     public static void streamToQueue(BufferedReader reader) {
-        if (needQuit.get() == false) {
-            try {
-                String s = reader.readLine();
-                if (quitSignalReceived.test(s) == false) {
-                    queue.offer(s);
-                }
+        try {
+            String s = reader.readLine();
+            if (quitSignalReceived.test(s) == false) {
+                queue.offer(s);
             }
-            catch (IOException e) {}
         }
+        catch (IOException e) {}
     };
 }
