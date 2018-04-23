@@ -31,7 +31,7 @@ public class BackgroundLogReader {
             executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r1), sleepShortly));
 
             //file.seek(file.length()); // move to end of file.
-            BufferedReader r2 = fileChannelToBufferedReader.apply(file.getChannel());
+            BufferedReader r2 = fileChannelToBufferedReader.apply(fileChannel);
             executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r2), sleepShortly));
 
             latch.await();
