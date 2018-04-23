@@ -119,13 +119,11 @@ public class BackgroundLogReader {
             System.out.format("정상 로그가 들어왔습니다. Alert 이 꺼집니다.%n", errCount);
         }
         if (errCount > 3) {
-            System.out.format("Alert : error clount 가 %s 회를 넘었습니다.%n", errCount);
+            System.out.format("Alert : error count 가 %s 회를 넘었습니다.%n", errCount);
         }
         return true;
     };
     private static final ExecutorService executors = Executors.newCachedThreadPool();
-
-
 
     private static boolean delay(int i) {
         try {Thread.sleep(i);} catch (InterruptedException e) {}
@@ -162,14 +160,12 @@ public class BackgroundLogReader {
     }
 
     public static void streamToQueue(BufferedReader reader) {
-        if (needQuit.get() == false) {
-            try {
-                String s = reader.readLine();
-                if (quitSignalReceived.test(s) == false) {
-                    queue.offer(s);
-                }
+        try {
+            String s = reader.readLine();
+            if (quitSignalReceived.test(s) == false) {
+                queue.offer(s);
             }
-            catch (IOException e) {}
         }
+        catch (IOException e) {}
     };
 }
