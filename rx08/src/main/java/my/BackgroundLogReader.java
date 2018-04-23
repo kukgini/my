@@ -14,23 +14,26 @@ import java.util.stream.StreamSupport;
 public class BackgroundLogReader {
 
     public static void main(String[] args) {
-        cleanDirThenRun.accept(outputDir, () -> run());
+        cleanDirThenRun(outputDir, () -> run());
     }
 
     public static void run() {
         executors.submit(() -> stream
+                .filter(errAlerm)
                 .filter(errProcessor)
                 .filter(oppProcessor)
                 .forEach(e -> System.out.format("Unknown Format:%s%n", e)));
 
-        BufferedReader r1 = inputStreamToBufferedReader.apply(System.in);
-        executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r1), 10));
-
         try (RandomAccessFile file = new RandomAccessFile(inputFilename, "r");
-             BufferedReader r2 = fileChannelToBufferedReader.apply(file.getChannel());
+             FileChannel fileChannel = file.getChannel();
         ){
+            BufferedReader r1 = stdInToBufferedReader.get();
+            executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r1), 10));
+
             //file.seek(file.length()); // move to end of file.
+            BufferedReader r2 = fileChannelToBufferedReader.apply(file.getChannel());
             executors.submit(() -> doUntil(needQuit, () -> streamToQueue(r2), 10));
+
             latch.await();
         } catch (Exception e) {
             e.printStackTrace();
@@ -47,7 +50,7 @@ public class BackgroundLogReader {
         System.out.println("system exit.");
     }
 
-    public static final BiConsumer<String, Runnable> cleanDirThenRun = (dir, run) -> {
+    public static final void cleanDirThenRun(String dir, Runnable run) {
         try {
             String current = new java.io.File(dir).getCanonicalPath();
             System.out.println("Cleaning dir:" + current);
@@ -66,6 +69,7 @@ public class BackgroundLogReader {
     private static final String errFilenamePattern = outputDir + "/ERROUT-%02d.txt";
     private static final String oppFilenamePattern = outputDir + "/OPPOUT-%02d.txt";
     private static final String inputFilename = inputDir + "/INPUT.txt";
+    public static Supplier<BufferedReader> stdInToBufferedReader = () -> new BufferedReader(new InputStreamReader(System.in));
     public static Function<InputStream, BufferedReader> inputStreamToBufferedReader = (x) -> new BufferedReader(new InputStreamReader(x));
     public static Function<FileChannel, BufferedReader> fileChannelToBufferedReader = (x) -> new BufferedReader(new InputStreamReader(Channels.newInputStream(x)));
 
@@ -105,6 +109,19 @@ public class BackgroundLogReader {
             oppWriter.write(s.substring(OPP_PREFIX.length()));
             return false;
         }
+    };
+    public static int errCount = 0;
+    public static Predicate<String> errAlerm = (s) -> {
+        if (s.startsWith(ERR_PREFIX) == true) {
+            errCount++;
+        } else if (s.startsWith(OPP_PREFIX) == true) {
+            errCount = 0;
+            System.out.format("정상 로그가 들어왔습니다. Alert 이 꺼집니다.%n", errCount);
+        }
+        if (errCount > 3) {
+            System.out.format("Alert : error clount 가 %s 회를 넘었습니다.%n", errCount);
+        }
+        return true;
     };
     private static final ExecutorService executors = Executors.newCachedThreadPool();
 
