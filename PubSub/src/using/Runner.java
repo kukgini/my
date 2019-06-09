@@ -1,14 +1,13 @@
 package using;
 
 import pubsub.Event;
-import pubsub.Message;
+import pubsub.Envelop;
 
 public class Runner {
 
 	public static void main(String[] args) {
 		Subscriber<String> subscriber1 = new Subscriber<>(1);
 		Subscriber<String> subscriber2 = new Subscriber<>(2);
-
 		Subscriber<String> subscriber3 = new Subscriber<>(3);
 		Subscriber<String> subscriber4 = new Subscriber<>(4);
 		
@@ -18,10 +17,12 @@ public class Runner {
 		Event.operation.subscribe("action#update", subscriber3);
 		Event.operation.subscribe("action#delete", subscriber4);
 
-		Message<String> message1 = new Message<>("Create Action");
-		Message<String> message2 = new Message<>("Update Action");
+		Envelop<String> envelop1 = new Envelop<>("Create Action");
+		Envelop<String> envelop2 = new Envelop<>("Update Action");
+		Envelop<String> envelop3 = new Envelop<>("Delete Action");
 		
-		Event.operation.publish("action#create", message1);
-		Event.operation.publish("action#update", message2);
+		Event.operation.publish("action#create", envelop1);
+		Event.operation.publish("action#update", envelop2);
+		Event.operation.publish("action#delete", envelop3);
 	}
 }

@@ -1,7 +1,7 @@
 package using;
 
-import pubsub.OnMessage;
-import pubsub.Message;
+import pubsub.OnReceived;
+import pubsub.Envelop;
 
 class Subscriber<T> {
     int id;
@@ -9,8 +9,8 @@ class Subscriber<T> {
         this.id = id;
     }
 
-    @OnMessage
-    private void onMessage(Message<T> message) {
-        System.out.printf("%d:%s%n", id, message.get());
+    @OnReceived
+    private void onReceived(Envelop<T> envelop) {
+        System.out.printf("Subscriber[%d] received: %s%n", id, envelop.open());
     }
 }

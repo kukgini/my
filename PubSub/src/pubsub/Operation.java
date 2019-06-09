@@ -15,14 +15,14 @@ public class Operation extends Event {
         channels.get(channelName).put(subscriber.hashCode(), new WeakReference<>(subscriber));
     }
 
-    public void publish(String channelName, Message message) {
+    public void publish(String channelName, Envelop message) {
         for(Map.Entry<Integer, WeakReference<Object>> subs : channels.get(channelName).entrySet()) {
             WeakReference<Object> subscriberRef = subs.getValue();
 
             Object subscriberObj = subscriberRef.get();
 
             for (final Method method : subscriberObj.getClass().getDeclaredMethods()) {
-                Annotation annotation = method.getAnnotation(OnMessage.class);
+                Annotation annotation = method.getAnnotation(OnReceived.class);
                 if (annotation != null) {
                     deliverMessage(subscriberObj, method, message);
                 }
@@ -30,7 +30,7 @@ public class Operation extends Event {
         }
     }
 
-    public <T, P extends Message> boolean deliverMessage(T subscriber, Method method, Message message) {
+    public <T, P extends Envelop> boolean deliverMessage(T subscriber, Method method, Envelop message) {
         try {
             boolean methodFound = false;
             for (final Class paramClass : method.getParameterTypes()) {
